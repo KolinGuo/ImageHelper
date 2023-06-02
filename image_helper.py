@@ -8,20 +8,24 @@ from pathlib import Path
 import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
-from typing import Sequence, Tuple, List, Union
-FONT_PATH = str(Path(__file__).resolve().parent / "ubuntu-font-family-0.83/UbuntuMono-R.ttf")
+from typing import Tuple, List, Union
+FONT_PATH = str(Path(__file__).resolve().parent
+                / "ubuntu-font-family-0.83/UbuntuMono-R.ttf")
+
 
 class ImageHelper:
     def __init__(self, bound_pad: int = 20, text_bbox_pad: int = 4,
                  bg_color: List[np.uint8] = [0, 0, 0]):
         """
         :param _image: actual image np.ndarray. [H, W, C]
-                       DO NOT edit it directly (will lead to undefined behavior)
-        :param image_bboxes: tag sub-image bboxes in _image. [left, top, right, bottom]
+                       DO NOT edit it directly (can lead to undefined behavior)
+        :param image_bboxes: tag sub-image bboxes in _image.
+                             [left, top, right, bottom]
         :param text_bboxes: text bboxes in _image. [left, top, right, bottom]
                             When drawing the new text and encounter overlaps,
                             shift the new text bbox so that there's no overlap.
-        :param bound_pad: number of pixels to pad if drawn outside of image shape.
+        :param bound_pad: number of pixels to pad
+                          (e.g., outside of boundary, between images).
         :param text_bbox_pad: number of pixels to pad around drawn text bboxes.
         :param bg_color: background color used for padding
         """
@@ -35,31 +39,34 @@ class ImageHelper:
     def _check_image_format(self, image: np.ndarray):
         assert image.dtype == self._image.dtype, \
             f'image must have dtype "{self._image.dtype}", get {image.dtype}'
-        assert image.ndim in [3], f'image must be 3 dimensional, get {image.ndim}'
+        assert image.ndim in [3], \
+            f'image must be 3 dimensional, get {image.ndim}'
         assert image.shape[2] in [3, 4], \
-            f'image must have 3 (RGB) or 4 (RGBA) channels, get {image.shape[2]}'
+            f'image must have 3 (RGB) or 4 (RGBA) channels, get {image.shape}'
 
     def _check_out_of_bounds(self, bbox: List[float]) -> bool:
         """Check if the bbox is out of _image bounds"""
         left, top, right, bottom = bbox
         return (left < self.bound_pad
-            or top < self.bound_pad
-            or right > self.width - self.bound_pad
-            or bottom > self.height - self.bound_pad)
+                or top < self.bound_pad
+                or right > self.width - self.bound_pad
+                or bottom > self.height - self.bound_pad)
 
     @staticmethod
     def _update_bbox(left, top, right, bottom, left_pad, top_pad):
-        return [left + left_pad, top + top_pad, right + left_pad, bottom + top_pad]
+        return [left + left_pad, top + top_pad,
+                right + left_pad, bottom + top_pad]
 
     def _update_bboxes(self, left_pad, top_pad):
         """Update all bboxes due to padding"""
-        for tag, bbox in self.image_bboxes.items():
-            self.image_bboxes[tag] = self._update_bbox(*bbox, left_pad, top_pad)
+        self.image_bboxes = {tag: self._update_bbox(*bbox, left_pad, top_pad)
+                             for tag, bbox in self.image_bboxes.items()}
 
-        for i in range(len(self.text_bboxes)):
-            self.text_bboxes[i] = self._update_bbox(*self.text_bboxes[i], left_pad, top_pad)
+        self.text_bboxes = [self._update_bbox(*bbox, left_pad, top_pad)
+                            for bbox in self.text_bboxes]
 
-    def _pad_image(self, bbox: List[float], xy: List[float], ret_bbox=False) -> List[float]:
+    def _pad_image(self, bbox: List[float],
+                   xy: List[float], ret_bbox=False) -> List[float]:
         """Pad image to fit bbox"""
         left, top, right, bottom = bbox
         left_pad, top_pad, right_pad, bottom_pad = 0, 0, 0, 0
@@ -78,14 +85,13 @@ class ImageHelper:
         if bottom > self.height - self.bound_pad:
             bottom_pad = int(np.ceil(bottom-self.height)) + self.bound_pad
 
-        print("left,top,right,bottom pads: ", left_pad, top_pad, right_pad, bottom_pad)
-
         # Update bboxes
         self._update_bboxes(left_pad, top_pad)
 
         # Pad image with zeros
         pad_width = [[top_pad, bottom_pad], [left_pad, right_pad], [0, 0]]
-        self._image = np.pad(self._image, pad_width, constant_values=self.pad_values)
+        self._image = np.pad(self._image, pad_width,
+                             constant_values=self.pad_values)
         if ret_bbox:
             return xy, self._update_bbox(*bbox, left_pad, top_pad)
         else:
@@ -94,18 +100,21 @@ class ImageHelper:
     def add_image(self, image: np.ndarray, tag: str, xy: List[float],
                   rel_tag: str = 'whole', show_vis=False):
         """Add an image named tag at xy position where xy is top-left corner
-        :param image: image to add. If read by cv2, make sure it's ordered as RGB/RGBA.
+        :param image: image to add.
+                      If read by cv2, make sure it's ordered as RGB/RGBA.
         :param tag: the image tag for future reference.
         :param xy: the top-left corner in self._image to add the image.
         :param rel_tag: tag of the relative image top-left corner to use.
                         'whole' means xy is relative to whole image.
-                        Otherwise, xy is relative to the tag image top-left corner.
+                        Otherwise, xy is relative to the tag image
+                            top-left corner.
         :param show_vis: whether to show visualization.
         """
         self._check_image_format(image)
         assert tag not in self.image_bboxes, f"Image {tag} already exists"
         assert tag != 'whole', 'Tag "whole" is reserved for internal usage'
-        assert len(xy) == 2, f'xy should only contain top-left corner (x, y), get {xy}'
+        assert len(xy) == 2, \
+            f'xy should only contain top-left corner (x, y), get {xy}'
 
         height, width, channel = image.shape
         # Update xy to be relative to whole image
@@ -122,7 +131,8 @@ class ImageHelper:
             xy = self._pad_image(image_bbox, xy)
 
         image_bbox = self.image_bboxes[tag]
-        self._image[image_bbox[1]:image_bbox[3], image_bbox[0]:image_bbox[2]] = image.copy()
+        self._image[image_bbox[1]:image_bbox[3],
+                    image_bbox[0]:image_bbox[2]] = image.copy()
 
         if show_vis:
             self.show_image(window_name=f'Add image "{tag}"')
@@ -138,7 +148,8 @@ class ImageHelper:
         d = ImageDraw.Draw(txt_im)
         return xy, text_bbox, img, txt_im, d
 
-    def draw_multiline_text(self, xy: List[float], text: str, tag: str = 'whole',
+    def draw_multiline_text(self, xy: List[float], text: str,
+                            tag: str = 'whole',
                             fill: Tuple[np.uint8] = None,
                             font_path: str = FONT_PATH, font_size: int = None,
                             anchor: str = None, spacing=4, align='left',
@@ -150,39 +161,44 @@ class ImageHelper:
            shift the new text bbox so that there's no overlap.
         :param xy: The anchor coordinates of the text. (x, y)
         :param text: string to be drawn, can contain multilines.
-        :param tag: tag of the image to draw on. 'whole' means xy is relative to whole image.
+        :param tag: tag of the image to draw on.
+                    'whole' means xy is relative to whole image.
                     Otherwise, xy is relative to the tag image.
         :param fill: color used for drawing text, (R,G,B) or (R,G,B,A)
         :param font_path: path to a TrueType or OpenType font to use
         :param font_size: the requested font size, in points
-        :param anchor: The text anchor alignment. Determines the relative location of
-                       the anchor to the text. The default alignment is top left.
+        :param anchor: The text anchor alignment.
+                       Determines the relative location of
+                       the anchor to the text.
+                       The default alignment is top left.
                        See :ref:`text-anchors` for valid values.
                        https://pillow.readthedocs.io/en/stable/handbook/text-anchors.html#text-anchors
                        "tb" of anchor[1] are not supported for multiline text
         :param spacing: The number of pixels between lines.
-        :param align: "left", "center" or "right". Determines the relative alignment
-                      of lines. Use the anchor parameter to specify the alignment to xy.
-        :param text_bbox_overlap_shift: "left", "right", "up", "down". How to shift the new text
+        :param align: "left", "center" or "right".
+                      Determines the relative alignment of lines.
+                      Use the anchor parameter to specify the alignment to xy.
+        :param text_bbox_overlap_shift: "left", "right", "up", "down".
+                                        How to shift the new text
                                         when there are overlaps.
         :param draw_text_bbox: whether to draw text bbox.
-        :param draw_text_bbox_kwargs: kwargs for drawing text bbox: {'fill', 'outline', 'width'}.
+        :param draw_text_bbox_kwargs: kwargs for drawing text bbox:
+                                      {'fill', 'outline', 'width'}.
         :param show_vis: whether to show visualization.
-        :param ret_bbox: whether to return text bbox (should only be used internally).
+        :param ret_bbox: whether to return text bbox
+                         (should only be used internally).
         :return out_image: output image, always RGBA format [H, W, 4].
         """
         assert tag == 'whole' or tag in self.image_bboxes, \
-                f'tag "{tag}" does not exist. Existing tags: {list(self.image_bboxes.keys())}'
+            (f'tag "{tag}" does not exist. '
+             f'Existing tags: {list(self.image_bboxes.keys())}')
         assert len(xy) == 2, f'xy should only contain anchor (x, y), get {xy}'
         assert text_bbox_overlap_shift in ["left", "right", "up", "down"], \
-                f'Unknown text_bbox_overlap_shift {text_bbox_overlap_shift}'
+            f'Unknown text_bbox_overlap_shift {text_bbox_overlap_shift}'
 
-        if font_path is None:
-            font = ImageFont.load_default()
-            if font_size is not None: print('[ Warning ] Default font does not support changing size.')
-        else:
-            # use a truetype font
-            font = ImageFont.truetype(font_path, 10 if font_size is None else font_size)
+        # use a truetype font
+        font = ImageFont.truetype(font_path,
+                                  10 if font_size is None else font_size)
 
         # Update xy to be relative to whole image
         if tag != 'whole':
@@ -190,7 +206,7 @@ class ImageHelper:
             xy[1] += self.image_bboxes[tag][1]
 
         img = Image.fromarray(self._image).convert('RGBA')
-        # make a blank image for the text, initialized to transparent text color
+        # make a blank image for the text, initialized to transparent color
         txt_im = Image.new("RGBA", img.size, (255, 255, 255, 0))
         d = ImageDraw.Draw(txt_im)
 
@@ -203,26 +219,34 @@ class ImageHelper:
         text_bbox = _pad_bbox(text_bbox, self.text_bbox_pad)
         # Check and pad image for text_bbox
         if self._check_out_of_bounds(text_bbox):
-            xy, text_bbox, img, txt_im, d = self._pad_image_for_text(text_bbox, xy)
+            xy, text_bbox, img, txt_im, d = self._pad_image_for_text(
+                text_bbox, xy
+            )
 
         # Check if there's overlap with text_bboxes
         if self.text_bboxes:
             left, top, right, bottom = text_bbox
             text_bboxes = np.array(self.text_bboxes)
-            overlap_idx = ~((text_bboxes[:, 0] > right) | (text_bboxes[:, 2] < left) \
-                          | (text_bboxes[:, 1] > bottom) | (text_bboxes[:, 3] < top))
+            overlap_idx = ~(
+                (text_bboxes[:, 0] > right) | (text_bboxes[:, 2] < left)
+                | (text_bboxes[:, 1] > bottom) | (text_bboxes[:, 3] < top)
+            )
             if np.any(overlap_idx):  # overlaps exist
                 if text_bbox_overlap_shift == 'right':
                     max_right = np.max(text_bboxes[overlap_idx, 2])
                     xy[0] += max_right - left + 1
                 else:
-                    raise NotImplementedError('text_bbox_overlap_shift other than '
-                                              '"right" is not yet implemented')
+                    raise NotImplementedError(
+                        'text_bbox_overlap_shift other than '
+                        '"right" is not yet implemented'
+                    )
                 text_bbox = d.textbbox(xy, text, font, anchor, spacing, align)
                 text_bbox = _pad_bbox(text_bbox, self.text_bbox_pad)
                 # Check and pad image for text_bbox
                 if self._check_out_of_bounds(text_bbox):
-                    xy, text_bbox, img, txt_im, d = self._pad_image_for_text(text_bbox, xy)
+                    xy, text_bbox, img, txt_im, d = self._pad_image_for_text(
+                        text_bbox, xy
+                    )
 
         # Actual drawing code
         if draw_text_bbox:
@@ -240,18 +264,24 @@ class ImageHelper:
         else:
             return np.array(out_im)
 
-    def add_multiline_text(self, xy: List[float], text: str, **kwargs) -> np.ndarray:
+    def add_multiline_text(self, xy: List[float], text: str,
+                           **kwargs) -> np.ndarray:
         """Draw and add multiline text
-        :param kwargs: kwargs for drawing image bbox: {'fill', 'outline', 'width'}.
+        :param kwargs: kwargs for drawing image bbox:
+                       {'fill', 'outline', 'width'}.
                        Can also contain boolean show_vis
         """
-        self._image, text_bbox = self.draw_multiline_text(xy, text, ret_bbox=True, **kwargs)
+        self._image, text_bbox = self.draw_multiline_text(
+            xy, text, ret_bbox=True, **kwargs
+        )
         self.text_bboxes.append(text_bbox)
         return self.image
 
-    def draw_image_bboxes(self, image: np.ndarray = None, show_vis=False, **kwargs) -> np.ndarray:
+    def draw_image_bboxes(self, image: np.ndarray = None, show_vis=False,
+                          **kwargs) -> np.ndarray:
         """Draw all image bboxes
-        :param kwargs: kwargs for drawing image bbox: {'fill', 'outline', 'width'}.
+        :param kwargs: kwargs for drawing image bbox:
+                       {'fill', 'outline', 'width'}.
         """
         if image is None:
             image = self._image
@@ -266,16 +296,18 @@ class ImageHelper:
         out_im = Image.alpha_composite(img, bbox_im)
 
         if show_vis:
-            self.show_image(out_im, window_name=f'Draw image bboxes')
+            self.show_image(out_im, window_name='Draw image bboxes')
 
         return np.array(out_im)
 
     def add_image_bboxes(self, **kwargs) -> np.ndarray:
         """Draw and add all image bboxes
-        :param kwargs: kwargs for drawing image bbox: {'fill', 'outline', 'width'}.
+        :param kwargs: kwargs for drawing image bbox:
+                       {'fill', 'outline', 'width'}.
                        Can also contain boolean show_vis
         """
-        assert 'image' not in kwargs, f'image found in kwargs when calling add_image_bboxes()'
+        assert 'image' not in kwargs, \
+            'image found in kwargs when calling add_image_bboxes()'
         self._image = self.draw_image_bboxes(**kwargs)
         return self.image
 
@@ -350,19 +382,25 @@ class ImageHelper:
         elif self.channel == 4:
             return 'RGBA'
         else:
-            raise NotImplementedError(f'Image channel {self.channel} is not yet implemented')
+            raise NotImplementedError(
+                f'Image channel {self.channel} is not yet implemented'
+            )
 
     @property
     def pad_values(self):
         # TODO: check if dtype=object causes issues
         if self.color_format == 'RGB':
-            return np.asarray([[self.bg_color] * 2] * 2 + [[0, 0]], dtype=object)
+            return np.asarray([[self.bg_color] * 2] * 2 + [[0, 0]],
+                              dtype=object)
         elif self.color_format == 'RGBA':
-            return np.asarray([[self.bg_color+[255]] * 2] * 2 + [[0, 0]], dtype=object)
+            return np.asarray([[self.bg_color+[255]] * 2] * 2 + [[0, 0]],
+                              dtype=object)
         else:
-            raise NotImplementedError(f'Image channel {self.channel} is not yet implemented')
+            raise NotImplementedError(
+                f'Image channel {self.channel} is not yet implemented'
+            )
 
-    ### Properties of sub-images contained in image_bboxes ###
+    """Properties of sub-images contained in image_bboxes"""
     @property
     def sub_images_left(self):
         """Left boundary of all sub-images"""
@@ -398,4 +436,5 @@ class ImageHelper:
     @property
     def sub_images_bbox(self):
         """Enclosed bbox of all sub-images"""
-        return [self.sub_images_left, self.sub_images_top, self.sub_images_right, self.sub_images_bottom]
+        return [self.sub_images_left, self.sub_images_top,
+                self.sub_images_right, self.sub_images_bottom]
