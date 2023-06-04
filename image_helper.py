@@ -14,16 +14,20 @@ FONT_PATH = str(Path(__file__).resolve().parent
 
 
 class ImageHelper:
+    """
+    A single ImageHelper for combining images and adding texts
+
+    :ivar _image: actual image np.ndarray. [H, W, C]
+                  DO NOT edit it directly (can lead to undefined behavior)
+    :ivar image_bboxes: tag sub-image bboxes in _image.
+                        [left, top, right, bottom]
+    :ivar text_bboxes: text bboxes in _image. [left, top, right, bottom]
+                       When drawing the new text and encounter overlaps,
+                       shift the new text bbox so that there's no overlap.
+    """
     def __init__(self, bound_pad: int = 20, text_bbox_pad: int = 4,
                  bg_color: List[np.uint8] = [0, 0, 0]):
         """
-        :param _image: actual image np.ndarray. [H, W, C]
-                       DO NOT edit it directly (can lead to undefined behavior)
-        :param image_bboxes: tag sub-image bboxes in _image.
-                             [left, top, right, bottom]
-        :param text_bboxes: text bboxes in _image. [left, top, right, bottom]
-                            When drawing the new text and encounter overlaps,
-                            shift the new text bbox so that there's no overlap.
         :param bound_pad: number of pixels to pad
                           (e.g., outside of boundary, between images).
         :param text_bbox_pad: number of pixels to pad around drawn text bboxes.
@@ -45,7 +49,7 @@ class ImageHelper:
             f'image must have 3 (RGB) or 4 (RGBA) channels, get {image.shape}'
 
     def _check_out_of_bounds(self, bbox: List[float]) -> bool:
-        """Check if the bbox is out of _image bounds"""
+        """Check if the bbox is out of _image bounds (consider bound_pad)"""
         left, top, right, bottom = bbox
         return (left < self.bound_pad
                 or top < self.bound_pad
@@ -131,8 +135,15 @@ class ImageHelper:
             xy = self._pad_image(image_bbox, xy)
 
         image_bbox = self.image_bboxes[tag]
-        self._image[image_bbox[1]:image_bbox[3],
-                    image_bbox[0]:image_bbox[2]] = image.copy()
+        if channel == 3:
+            self._image[image_bbox[1]:image_bbox[3],
+                        image_bbox[0]:image_bbox[2]] = image.copy()
+        elif channel == 4:
+            bg = Image.new("RGBA", self.size, (255, 255, 255, 0))
+            bg.paste(Image.fromarray(image), image_bbox)
+            self._image = np.asarray(Image.alpha_composite(
+                self.pil_image.convert("RGBA"), bg
+            ).convert("RGB"))
 
         if show_vis:
             self.show_image(window_name=f'Add image "{tag}"')
@@ -143,7 +154,7 @@ class ImageHelper:
         """Pad image for drawing text"""
         xy, text_bbox = self._pad_image(text_bbox, xy, ret_bbox=True)
         # Update due to change in self._image
-        img = Image.fromarray(self._image).convert('RGBA')
+        img = self.pil_image.convert('RGBA')
         txt_im = Image.new("RGBA", img.size, (255, 255, 255, 0))
         d = ImageDraw.Draw(txt_im)
         return xy, text_bbox, img, txt_im, d
@@ -187,7 +198,7 @@ class ImageHelper:
         :param show_vis: whether to show visualization.
         :param ret_bbox: whether to return text bbox
                          (should only be used internally).
-        :return out_image: output image, always RGBA format [H, W, 4].
+        :return out_image: output image, always RGB format [H, W, 3].
         """
         assert tag == 'whole' or tag in self.image_bboxes, \
             (f'tag "{tag}" does not exist. '
@@ -205,8 +216,8 @@ class ImageHelper:
             xy[0] += self.image_bboxes[tag][0]
             xy[1] += self.image_bboxes[tag][1]
 
-        img = Image.fromarray(self._image).convert('RGBA')
-        # make a blank image for the text, initialized to transparent color
+        img = self.pil_image.convert('RGBA')
+        # make a blank image for text, initialized to transparent text color
         txt_im = Image.new("RGBA", img.size, (255, 255, 255, 0))
         d = ImageDraw.Draw(txt_im)
 
@@ -253,16 +264,16 @@ class ImageHelper:
             d.rectangle(text_bbox, **draw_text_bbox_kwargs)
         # Draw the text
         d.text(xy, text, fill, font, anchor, spacing, align)
-        out_im = Image.alpha_composite(img, txt_im)
+        out_im = Image.alpha_composite(img, txt_im).convert("RGB")
 
         if show_vis:
             short_text = re.sub('[^ a-zA-Z0-9_]', '', text)[:25]
             self.show_image(out_im, window_name=f'Draw text "{short_text}"')
 
         if ret_bbox:
-            return np.array(out_im), text_bbox
+            return np.asarray(out_im), text_bbox
         else:
-            return np.array(out_im)
+            return np.asarray(out_im)
 
     def add_multiline_text(self, xy: List[float], text: str,
                            **kwargs) -> np.ndarray:
@@ -293,12 +304,12 @@ class ImageHelper:
 
         for tag, image_bbox in self.image_bboxes.items():
             d.rectangle(image_bbox, **kwargs)
-        out_im = Image.alpha_composite(img, bbox_im)
+        out_im = Image.alpha_composite(img, bbox_im).convert("RGB")
 
         if show_vis:
             self.show_image(out_im, window_name='Draw image bboxes')
 
-        return np.array(out_im)
+        return np.asarray(out_im)
 
     def add_image_bboxes(self, **kwargs) -> np.ndarray:
         """Draw and add all image bboxes
@@ -313,34 +324,17 @@ class ImageHelper:
 
     def show_image(self, img: Image = None, use_cv2=True, window_name='Image'):
         if img is None:
-            img = Image.fromarray(self._image)
+            img = self.pil_image
 
         if not use_cv2:
             img.show(window_name)
         else:
-            cv2.imshow(window_name, np.array(img)[..., ::-1])
+            cv2.imshow(window_name, np.asarray(img)[..., ::-1])
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
     def save_image(self, save_path):
-        Image.fromarray(self._image).save(save_path)
-
-    @property
-    def image_no_bound_pad(self):
-        """Read-only view of _image without boundary padding"""
-        image = self._image[self.bound_pad:-self.bound_pad,
-                            self.bound_pad:-self.bound_pad].view()
-        image.flags.writeable = False
-        return image
-
-    @property
-    def cv2_image_no_bound_pad(self):
-        """cv2 BGR image copy of _image without boundary padding"""
-        img = Image.fromarray(
-            self._image[self.bound_pad:-self.bound_pad,
-                        self.bound_pad:-self.bound_pad]
-        ).convert('RGB')
-        return np.array(img)[..., ::-1]  # RGB to BGR
+        self.pil_image.save(save_path)
 
     @property
     def image(self):
@@ -350,10 +344,32 @@ class ImageHelper:
         return image
 
     @property
+    def pil_image(self):
+        """PIL image"""
+        return Image.fromarray(self._image)
+
+    @property
     def cv2_image(self):
         """cv2 BGR image copy of _image"""
-        img = Image.fromarray(self._image).convert('RGB')
-        return np.array(img)[..., ::-1]  # RGB to BGR
+        return self._image[..., ::-1]  # RGB to BGR
+
+    @property
+    def image_no_pad(self):
+        """Read-only view of _image without boundary padding"""
+        image = self._image[self.bound_pad:-self.bound_pad,
+                            self.bound_pad:-self.bound_pad].view()
+        image.flags.writeable = False
+        return image
+
+    @property
+    def pil_image_no_pad(self):
+        """PIL image"""
+        return Image.fromarray(self.image_no_pad)
+
+    @property
+    def cv2_image_no_pad(self):
+        """cv2 BGR image copy of _image without boundary padding"""
+        return self.image_no_pad[..., ::-1]  # RGB to BGR
 
     @property
     def height(self):
@@ -370,6 +386,10 @@ class ImageHelper:
     @property
     def shape(self):
         return self._image.shape
+
+    @property
+    def size(self):
+        return (self.width, self.height)
 
     @property
     def dtype(self):

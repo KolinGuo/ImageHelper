@@ -1,2 +1,2 @@
 # ImageHelper
-A simple image helper for combining images and add texts
+A simple image helper for combining images and adding texts
