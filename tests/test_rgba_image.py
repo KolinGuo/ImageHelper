@@ -25,7 +25,7 @@ class TestRGBAImage:
         image_helper.add_image(
             np.tile([255, 0, 0], [h, h, 1]).astype(np.uint8), [200, 200], tag="red"
         )
-        image_helper.add_multiline_text(
+        image_helper.add_text(
             "green zasqssl\nred\n tt", [20-4, 20],
             fill=(255, 255, 255, 128), font_size=10,
             anchor='ra', draw_text_bbox=True

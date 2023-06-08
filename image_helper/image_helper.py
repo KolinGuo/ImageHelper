@@ -166,7 +166,8 @@ class ImageHelper:
 
     def add_image(self, image: np.ndarray,
                   anchor_pos: Union[str, Sequence[float]] = 'r',
-                  rel_tag: str = '__whole__', tag: str = None, show_vis=False):
+                  rel_tag: str = '__whole__', tag: str = None, no_pad=False,
+                  show_vis=False) -> np.ndarray:
         """Add an image named tag at anchor_pos
         :param image: image to add.
                       If read by cv2, make sure it's ordered as RGB/RGBA.
@@ -178,6 +179,7 @@ class ImageHelper:
                         If xy is pixel position, it is relative to
                             the tag image top-left corner.
         :param tag: the image tag for future reference.
+        :param no_pad: whether to pad between images.
         :param show_vis: whether to show visualization.
         """
         self._check_image_format(image)
@@ -189,7 +191,8 @@ class ImageHelper:
         height, width, channel = image.shape
         # Get anchor_xy coordinates and bbox coordinates
         anchor_xy, image_bbox = self._get_bbox_from_anchor(
-            anchor_pos, rel_tag, (width, height), self.bound_pad
+            anchor_pos, rel_tag, (width, height),
+            0 if no_pad else self.bound_pad
         )
         anchor_xy = tuple(np.floor(anchor_xy).astype(int))
         image_bbox = tuple(np.floor(image_bbox).astype(int))
@@ -224,25 +227,26 @@ class ImageHelper:
         d = ImageDraw.Draw(txt_im)
         return xy, text_bbox, img, txt_im, d
 
-    def draw_multiline_text(self, text: str,
-                            anchor_pos: Union[str, Sequence[float]] = 'r',
-                            rel_tag: str = '__whole__',
-                            fill: Tuple[np.uint8] = None,
-                            font_path: str = FONT_PATH, font_size: int = None,
-                            anchor: str = None, spacing=4, align='left',
-                            text_bbox_overlap_shift='right',
-                            draw_text_bbox=False, draw_text_bbox_kwargs={},
-                            show_vis=False, ret_bbox=False) -> np.ndarray:
+    def draw_text(self, text: str,
+                  anchor_pos: Union[str, Sequence[float]] = 'r',
+                  rel_tag: str = '__whole__', no_pad=False,
+                  fill: Tuple[np.uint8] = None,
+                  font_path: str = FONT_PATH, font_size: int = None,
+                  anchor: str = None, spacing=4, align='left',
+                  text_bbox_overlap_shift='right',
+                  draw_text_bbox=False, draw_text_bbox_kwargs={},
+                  show_vis=False, ret_bbox=False) -> np.ndarray:
         """Draw a multiline text using PIL. Extend image size when necessary
            When drawing the new text and encounter overlaps,
            shift the new text bbox so that there's no overlap.
+        :param text: string to be drawn, can contain multilines.
         :param anchor_pos: xy anchor coordinates or anchor string composed of:
                            left (l), top (t), right (r), bottom (b), middle (m)
                            inside (i), outside (o), corner (c)
-        :param text: string to be drawn, can contain multilines.
         :param rel_tag: tag of the image to draw on.
                         '__whole__' means xy is relative to whole image.
                         Otherwise, xy is relative to the tag image.
+        :param no_pad: whether to pad between image and text.
         :param fill: color used for drawing text, (R,G,B) or (R,G,B,A)
         :param font_path: path to a TrueType or OpenType font to use
         :param font_size: the requested font size, in points
@@ -277,7 +281,7 @@ class ImageHelper:
 
         # Get anchor_xy coordinates and bbox_anchor string
         anchor_xy, bbox_anchor = self._get_bbox_from_anchor(
-            anchor_pos, rel_tag, pad_size=self.text_bbox_pad
+            anchor_pos, rel_tag, pad_size=0 if no_pad else self.text_bbox_pad
         )
         # Convert bbox_anchor to PIL text-anchors format
         bbox_anchor = bbox_anchor.replace("t", "a").replace("b", "d")
@@ -345,15 +349,15 @@ class ImageHelper:
         else:
             return np.asarray(out_im)
 
-    def add_multiline_text(self, text: str,
-                           anchor_pos: Union[str, Sequence[float]] = 'r',
-                           **kwargs) -> np.ndarray:
+    def add_text(self, text: str,
+                 anchor_pos: Union[str, Sequence[float]] = 'r',
+                 **kwargs) -> np.ndarray:
         """Draw and add multiline text
         :param kwargs: kwargs for drawing image bbox:
                        {'fill', 'outline', 'width'}.
                        Can also contain boolean show_vis
         """
-        self._image, text_bbox = self.draw_multiline_text(
+        self._image, text_bbox = self.draw_text(
             text, anchor_pos, ret_bbox=True, **kwargs
         )
         self.text_bboxes.append(text_bbox)

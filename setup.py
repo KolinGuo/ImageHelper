@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 if __name__ == "__main__":
     setup(
         name='image_helper',
-        version='0.0.1',
+        version='0.0.1.dev20230608',
         description="A simple image helper for combining images and adding texts",
         python_requires=">=3.8",
         install_requires=[
