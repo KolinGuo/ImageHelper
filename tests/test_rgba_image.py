@@ -20,19 +20,19 @@ class TestRGBAImage:
         h = 100
         image_helper = ImageHelper()
         image_helper.add_image(
-            np.tile([0, 255, 0], [h, h, 1]).astype(np.uint8), "green", (0, 0)
+            np.tile([0, 255, 0], [h, h, 1]).astype(np.uint8), (0, 0), tag="green"
         )
         image_helper.add_image(
-            np.tile([255, 0, 0], [h, h, 1]).astype(np.uint8), "red", [200, 200]
+            np.tile([255, 0, 0], [h, h, 1]).astype(np.uint8), [200, 200], tag="red"
         )
         image_helper.add_multiline_text(
-            [20-4, 20], "green zasqssl\nred\n tt",
+            "green zasqssl\nred\n tt", [20-4, 20],
             fill=(255, 255, 255, 128), font_size=10,
             anchor='ra', draw_text_bbox=True
         )
         image_helper.add_image(
             np.asarray(Image.open(self.image_dir / "img_rgba.png")),
-            "rgba", [0, 0]
+            [0, 0], tag="rgba"
         )
 
         np.testing.assert_allclose(

@@ -9,9 +9,9 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 from typing import Sequence, Tuple, List, Union
-from utils import anchor_to_bbox, get_bbox_rel_to_bbox
+from .utils import anchor_to_bbox, get_bbox_rel_to_bbox
 FONT_PATH = str(Path(__file__).resolve().parent
-                / "ubuntu-font-family-0.83/UbuntuMono-R.ttf")
+                / "fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf")
 
 
 class ImageHelper:
