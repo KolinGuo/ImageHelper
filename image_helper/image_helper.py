@@ -345,9 +345,9 @@ class ImageHelper:
             self.show_image(out_im, window_name=f'Draw text "{short_text}"')
 
         if ret_bbox:
-            return np.asarray(out_im), text_bbox
+            return np.asarray(out_im).copy(), text_bbox
         else:
-            return np.asarray(out_im)
+            return np.asarray(out_im).copy()
 
     def add_text(self, text: str,
                  anchor_pos: Union[str, Sequence[float]] = 'r',
