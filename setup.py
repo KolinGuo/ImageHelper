@@ -1,18 +1,11 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 if __name__ == "__main__":
     setup(
-        name='image_helper',
-        version='0.0.1.dev20230608',
+        name="image_helper",
         description="A simple image helper for combining images and adding texts",
-        python_requires=">=3.8",
-        install_requires=[
-            'Pillow',
-            'opencv-python',
-            'numpy',
-        ],
         packages=find_packages(
-            include=['image_helper*'],
+            include=["image_helper*"],
         ),
         include_package_data=True,
     )
