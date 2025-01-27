@@ -2,10 +2,10 @@ import io
 import shutil
 import subprocess
 
-from PIL import Image
+from PIL.Image import Image
 
 
-def copy_to_clipboard(img: Image.Image):
+def copy_to_clipboard(img: Image):
     """Copy image to system clipboard in PNG format using xclip"""
     if shutil.which("xclip") is None:
         raise RuntimeError(
