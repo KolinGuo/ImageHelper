@@ -1,11 +1,13 @@
-from typing import Optional, Sequence, Tuple, Union
+from __future__ import annotations
+
+from typing import Optional, Sequence
 
 import numpy as np
 
 
 def bbox_to_anchors(
     bbox: Sequence[float], anchor: Optional[str] = None
-) -> Union[np.ndarray, Tuple[float, float]]:
+) -> np.ndarray | tuple[float, float]:
     """Convert bbox to anchor points
     :param bbox: [left, top, right, bottom]
     :param anchor: If provided, only extract position of that anchor. Choices:
@@ -25,14 +27,12 @@ def bbox_to_anchors(
     """
     left, top, right, bottom = bbox
     if anchor is None:
-        return np.array(
-            [
-                [left, top],
-                [right, top],
-                [left, bottom],
-                [right, bottom],
-            ]
-        )
+        return np.array([
+            [left, top],
+            [right, top],
+            [left, bottom],
+            [right, bottom],
+        ])
 
     anchor_h, anchor_v = anchor
     if anchor_h == "l":
@@ -43,7 +43,7 @@ def bbox_to_anchors(
         x = right
     else:
         raise ValueError(
-            f"Unknown anchor[0] '{anchor_h}'. " "Value choices: 'l', 'm', 'r'"
+            f"Unknown anchor[0] '{anchor_h}'. Value choices: 'l', 'm', 'r'"
         )
     if anchor_v == "t":
         y = top
@@ -53,14 +53,14 @@ def bbox_to_anchors(
         y = bottom
     else:
         raise ValueError(
-            f"Unknown anchor[1] '{anchor_v}'. " "Value choices: 't', 'm', 'b'"
+            f"Unknown anchor[1] '{anchor_v}'. Value choices: 't', 'm', 'b'"
         )
     return x, y
 
 
 def anchor_to_bbox(
     anchor_xy: Sequence[float], bbox_size: Sequence[float], anchor: str = "lt"
-) -> Tuple[float, float, float, float]:
+) -> tuple[float, float, float, float]:
     """Convert anchor and bbox_size to bbox
     :param anchor_xy: xy pixel position of anchor
     :param bbox_size: the size of the bbox, (width, height).
@@ -89,7 +89,7 @@ def anchor_to_bbox(
         left, right = x - width, x
     else:
         raise ValueError(
-            f"Unknown anchor[0] '{anchor_h}'. " "Value choices: 'l', 'm', 'r'"
+            f"Unknown anchor[0] '{anchor_h}'. Value choices: 'l', 'm', 'r'"
         )
     if anchor_v == "t":
         top, bottom = y, y + height
@@ -100,7 +100,7 @@ def anchor_to_bbox(
         top, bottom = y - height, y
     else:
         raise ValueError(
-            f"Unknown anchor[1] '{anchor_v}'. " "Value choices: 't', 'm', 'b'"
+            f"Unknown anchor[1] '{anchor_v}'. Value choices: 't', 'm', 'b'"
         )
     return (left, top, right, bottom)
 
@@ -110,7 +110,7 @@ def get_bbox_rel_to_bbox(
     rel_bbox: Sequence[float],
     bbox_size: Optional[Sequence[float]] = None,
     pad_size: int = 0,
-) -> Tuple[Tuple[float, float], Union[str, Tuple[float, float, float, float]]]:
+) -> tuple[tuple[float, float], str | tuple[float, float, float, float]]:
     """Get bbox coordinates relative to an existing bbox
         :param anchor: anchor position, composed of:
                        left (l), top (t), right (r), bottom (b), middle (m)
