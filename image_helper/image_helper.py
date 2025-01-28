@@ -64,7 +64,7 @@ class ImageHelper:
             else:
                 raise TypeError("image must be either np.ndarray or PIL.Image.Image")
 
-    def _check_image_format(self, image: np.ndarray):
+    def _assert_image_format(self, image: np.ndarray) -> None:
         assert image.dtype == self._image.dtype, (
             f'image must have dtype "{self._image.dtype}", get {image.dtype}'
         )
@@ -230,7 +230,7 @@ class ImageHelper:
         :param no_pad: whether to pad between images.
         :param show_vis: whether to show visualization.
         """
-        self._check_image_format(image)
+        self._assert_image_format(image)
         if tag is None:
             tag = f"image_{len(self.image_bboxes) + 1}"
         assert tag not in self.image_bboxes, f"Image {tag} already exists"
