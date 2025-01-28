@@ -36,11 +36,14 @@ class ImageHelper:
 
     def __init__(
         self,
+        image: Optional[np.ndarray | Image.Image] = None,
+        *,
         bound_pad: int = 20,
         text_bbox_pad: int = 4,
         bg_color: Sequence[np.uint8] = (0, 0, 0),  # type: ignore
     ):
         """
+        :param image: initial image
         :param bound_pad: number of pixels to pad
                           (e.g., outside of boundary, between images).
         :param text_bbox_pad: number of pixels to pad around drawn text bboxes.
@@ -52,6 +55,14 @@ class ImageHelper:
         self.bound_pad = bound_pad
         self.text_bbox_pad = text_bbox_pad
         self.bg_color = list(bg_color)
+
+        if image is not None:
+            if isinstance(image, Image.Image):
+                self.add_image(np.asarray(image))
+            elif isinstance(image, np.ndarray):
+                self.add_image(image)
+            else:
+                raise TypeError("image must be either np.ndarray or PIL.Image.Image")
 
     def _check_image_format(self, image: np.ndarray):
         assert image.dtype == self._image.dtype, (
