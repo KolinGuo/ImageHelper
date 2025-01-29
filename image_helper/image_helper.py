@@ -213,6 +213,7 @@ class ImageHelper:
         self,
         image: np.ndarray,
         anchor_pos: str | Sequence[float] = "r",
+        *,
         rel_tag: str = "__whole__",
         tag: Optional[str] = None,
         no_pad=False,
@@ -291,6 +292,7 @@ class ImageHelper:
         self,
         text: str,
         anchor_pos: str | Sequence[float] = "r",
+        *,
         rel_tag: str = "__whole__",
         no_pad: bool = False,
         fill: Optional[Sequence[np.uint8]] = None,
@@ -454,7 +456,7 @@ class ImageHelper:
         return self
 
     def draw_image_bboxes(
-        self, image: Optional[np.ndarray] = None, show_vis: bool = False, **kwargs
+        self, image: Optional[np.ndarray] = None, *, show_vis: bool = False, **kwargs
     ) -> np.ndarray:
         """
         Draw all image bboxes
@@ -496,6 +498,7 @@ class ImageHelper:
     def show_image(
         self,
         img: Optional[Image.Image] = None,
+        *,
         use_cv2: bool = True,
         window_name: str = "Image",
     ) -> Self:
