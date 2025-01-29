@@ -17,11 +17,6 @@ def copy_to_clipboard(img: Image):
     buffer.seek(0)
 
     process = subprocess.Popen(
-        "xclip -selection clipboard -t image/png -i",
-        shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+        "xclip -selection clipboard -t image/png -i", shell=True, stdin=subprocess.PIPE
     )
-    process.stdout, process.stderr = process.communicate(input=buffer.getvalue())  # type: ignore
+    process.communicate(input=buffer.getvalue())  # type: ignore
