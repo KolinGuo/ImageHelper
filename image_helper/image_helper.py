@@ -152,7 +152,9 @@ class ImageHelper:
         bbox_size: Optional[Sequence[float]] = None,
         pad_size: int = 0,
     ) -> tuple[tuple[float, float], str | tuple[float, float, float, float]]:
-        """Get anchor_xy and bbox coordinates relative to an existing bbox
+        """
+        Get anchor_xy and bbox coordinates relative to an existing bbox
+
         :param anchor_pos: xy pixel position or anchor string composed of:
                            left (l), top (t), right (r), bottom (b), middle (m)
                            inside (i), outside (o), corner (c)
@@ -216,7 +218,9 @@ class ImageHelper:
         no_pad=False,
         show_vis=False,
     ) -> Self:
-        """Add an image named tag at anchor_pos
+        """
+        Add an image named tag at anchor_pos
+
         :param image: image to add.
                       If read by cv2, make sure it's ordered as RGB/RGBA.
         :param anchor_pos: xy pixel position or anchor string composed of:
@@ -301,9 +305,11 @@ class ImageHelper:
         show_vis: bool = False,
         ret_bbox: bool = False,
     ) -> np.ndarray | tuple[np.ndarray, tuple[float, float, float, float]]:
-        """Draw a multiline text using PIL. Extend image size when necessary
-           When drawing the new text and encounter overlaps,
-           shift the new text bbox so that there's no overlap.
+        """
+        Draw a multiline text using PIL. Extend image size when necessary
+        When drawing the new text and encounter overlaps, shift the new text bbox
+        so that there's no overlap.
+
         :param text: string to be drawn, can contain multilines.
         :param anchor_pos: xy anchor coordinates or anchor string composed of:
                            left (l), top (t), right (r), bottom (b), middle (m)
@@ -428,10 +434,18 @@ class ImageHelper:
     def add_text(
         self, text: str, anchor_pos: str | Sequence[float] = "r", **kwargs
     ) -> Self:
-        """Draw and add multiline text
-        :param kwargs: kwargs for drawing image bbox:
-                       {'fill', 'outline', 'width'}.
-                       Can also contain boolean show_vis
+        """
+        Draw and add multiline text
+
+        :param text: string to be drawn, can contain multilines.
+        :param anchor_pos: xy anchor coordinates or anchor string composed of:
+                           left (l), top (t), right (r), bottom (b), middle (m)
+                           inside (i), outside (o), corner (c)
+        :param kwargs: kwargs for drawing text: {
+                "rel_tag", "no_pad", "fill", "font_path", "font_size",
+                "anchor", "spacing", "align",
+                "draw_text_bbox", "draw_text_bbox_kwargs"
+            }. Can also contain boolean show_vis
         """
         self._image, text_bbox = self.draw_text(
             text, anchor_pos, ret_bbox=True, **kwargs
@@ -442,7 +456,9 @@ class ImageHelper:
     def draw_image_bboxes(
         self, image: Optional[np.ndarray] = None, show_vis: bool = False, **kwargs
     ) -> np.ndarray:
-        """Draw all image bboxes
+        """
+        Draw all image bboxes
+
         :param kwargs: kwargs for drawing image bbox:
                        {'fill', 'outline', 'width'}.
         """
@@ -464,10 +480,12 @@ class ImageHelper:
         return np.asarray(out_im)
 
     def add_image_bboxes(self, **kwargs) -> Self:
-        """Draw and add all image bboxes
+        """
+        Draw and add all image bboxes
+
         :param kwargs: kwargs for drawing image bbox:
-                       {'fill', 'outline', 'width'}.
-                       Can also contain boolean show_vis
+            {'fill', 'outline', 'width'}.
+            Can also contain boolean show_vis
         """
         assert "image" not in kwargs, (
             "image found in kwargs when calling add_image_bboxes()"
