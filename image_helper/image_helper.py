@@ -41,6 +41,7 @@ class ImageHelper:
         bound_pad: int = 20,
         text_bbox_pad: int = 4,
         bg_color: Sequence[np.uint8] = (0, 0, 0),  # type: ignore
+        tag: Optional[str] = None,
     ):
         """
         :param image: initial image
@@ -48,6 +49,7 @@ class ImageHelper:
                           (e.g., outside of boundary, between images).
         :param text_bbox_pad: number of pixels to pad around drawn text bboxes.
         :param bg_color: background color used for padding
+        :param tag: the image tag of the initial image, used for future reference.
         """
         self._image = np.zeros((0, 0, 3), dtype=np.uint8)
         self.image_bboxes = {}  # {tag: bbox}
@@ -57,12 +59,7 @@ class ImageHelper:
         self.bg_color = list(bg_color)
 
         if image is not None:
-            if isinstance(image, Image.Image):
-                self.add_image(np.asarray(image))
-            elif isinstance(image, np.ndarray):
-                self.add_image(image)
-            else:
-                raise TypeError("image must be either np.ndarray or PIL.Image.Image")
+            self.add_image(image, tag=tag)
 
     def _assert_image_format(self, image: np.ndarray) -> None:
         assert image.dtype == self._image.dtype, (
@@ -211,7 +208,7 @@ class ImageHelper:
 
     def add_image(
         self,
-        image: np.ndarray,
+        image: np.ndarray | Image.Image,
         anchor_pos: str | Sequence[float] = "r",
         *,
         rel_tag: str = "__whole__",
@@ -235,6 +232,11 @@ class ImageHelper:
         :param no_pad: whether to pad between images.
         :param show_vis: whether to show visualization.
         """
+        if isinstance(image, Image.Image):
+            image = np.asarray(image)
+        elif not isinstance(image, np.ndarray):
+            raise TypeError("image must be either np.ndarray or PIL.Image.Image")
+
         self._assert_image_format(image)
         if tag is None:
             tag = f"image_{len(self.image_bboxes) + 1}"
@@ -456,16 +458,26 @@ class ImageHelper:
         return self
 
     def draw_image_bboxes(
-        self, image: Optional[np.ndarray] = None, *, show_vis: bool = False, **kwargs
+        self,
+        image: Optional[np.ndarray | Image.Image] = None,
+        *,
+        show_vis: bool = False,
+        **kwargs,
     ) -> np.ndarray:
         """
         Draw all image bboxes
 
+        :param image: image on which to draw the bboxes of this ImageHelper's image
+        :param show_vis: whether to show visualization.
         :param kwargs: kwargs for drawing image bbox:
                        {'fill', 'outline', 'width'}.
         """
         if image is None:
             image = self._image
+        elif isinstance(image, Image.Image):
+            image = np.asarray(image)
+        elif not isinstance(image, np.ndarray):
+            raise TypeError("image must be either np.ndarray or PIL.Image.Image")
 
         img = Image.fromarray(image).convert("RGBA")  # type: ignore
         # make a blank image for bbox, initialized to transparent color
@@ -497,13 +509,17 @@ class ImageHelper:
 
     def show_image(
         self,
-        img: Optional[Image.Image] = None,
+        img: Optional[np.ndarray | Image.Image] = None,
         *,
         use_cv2: bool = True,
         window_name: str = "Image",
     ) -> Self:
         if img is None:
             img = self.pil_image
+        elif isinstance(img, np.ndarray):
+            img = Image.fromarray(img)
+        elif not isinstance(img, Image.Image):
+            raise TypeError("image must be either np.ndarray or PIL.Image.Image")
 
         if not use_cv2:
             img.show(window_name)
