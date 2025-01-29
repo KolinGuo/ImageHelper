@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal, Optional, Sequence
+from typing import Literal, Optional, Self, Sequence
 
 import cv2
 import numpy as np
@@ -215,7 +215,7 @@ class ImageHelper:
         tag: Optional[str] = None,
         no_pad=False,
         show_vis=False,
-    ) -> np.ndarray:
+    ) -> Self:
         """Add an image named tag at anchor_pos
         :param image: image to add.
                       If read by cv2, make sure it's ordered as RGB/RGBA.
@@ -264,7 +264,7 @@ class ImageHelper:
         if show_vis:
             self.show_image(window_name=f'Add image "{tag}"')
 
-        return self.image
+        return self
 
     def _pad_image_for_text(
         self, text_bbox: tuple[float, float, float, float], xy: tuple[float, float]
@@ -427,7 +427,7 @@ class ImageHelper:
 
     def add_text(
         self, text: str, anchor_pos: str | Sequence[float] = "r", **kwargs
-    ) -> np.ndarray:
+    ) -> Self:
         """Draw and add multiline text
         :param kwargs: kwargs for drawing image bbox:
                        {'fill', 'outline', 'width'}.
@@ -437,7 +437,7 @@ class ImageHelper:
             text, anchor_pos, ret_bbox=True, **kwargs
         )
         self.text_bboxes.append(text_bbox)
-        return self.image
+        return self
 
     def draw_image_bboxes(
         self, image: Optional[np.ndarray] = None, show_vis: bool = False, **kwargs
@@ -463,7 +463,7 @@ class ImageHelper:
 
         return np.asarray(out_im)
 
-    def add_image_bboxes(self, **kwargs) -> np.ndarray:
+    def add_image_bboxes(self, **kwargs) -> Self:
         """Draw and add all image bboxes
         :param kwargs: kwargs for drawing image bbox:
                        {'fill', 'outline', 'width'}.
@@ -473,14 +473,14 @@ class ImageHelper:
             "image found in kwargs when calling add_image_bboxes()"
         )
         self._image = self.draw_image_bboxes(**kwargs)
-        return self.image
+        return self
 
     def show_image(
         self,
         img: Optional[Image.Image] = None,
         use_cv2: bool = True,
         window_name: str = "Image",
-    ) -> None:
+    ) -> Self:
         if img is None:
             img = self.pil_image
 
@@ -490,9 +490,11 @@ class ImageHelper:
             cv2.imshow(window_name, np.asarray(img)[..., ::-1])
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+        return self
 
-    def save_image(self, save_path: str | Path) -> None:
+    def save_image(self, save_path: str | Path) -> Self:
         self.pil_image.save(save_path)
+        return self
 
     @property
     def image(self) -> np.ndarray:
